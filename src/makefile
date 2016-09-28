@@ -13,11 +13,10 @@ MAIN = ../bin/osmium-polygon
 SRC = $(wildcard *.cpp)
 OBJ = $(filter-out main.o,$(SRC:.cpp=.o))
 
-# Main target.
 all : $(MAIN)
 
 $(MAIN) : $(OBJ) main.o
-	$(CC) $(FLAGS) -o $@ $^ $(LDLIBS) 
+	$(CC) $(FLAGS) -o $@ $^ $(LDLIBS)
 
 # Building .o files.
 %.o : %.cpp %.h
@@ -27,7 +26,22 @@ $(MAIN) : $(OBJ) main.o
 main.o : main.cpp
 	$(CC) $(FLAGS) -c $< -o $@
 
-clean : 
+# Tests
+TEST = ../bin/osmium-polygon-tests
+
+TEST_SRC = $(wildcard ./test/*.cpp)
+TEST_OBJ = $(TEST_SRC:.cpp=.o)
+
+test : $(TEST)
+
+$(TEST) : $(TEST_OBJ) $(OBJ)
+	$(CC) $(FLAGS) -o $@ $^ $(LDLIBS) -lboost_unit_test_framework
+
+test/%.o : test/%.cpp
+	$(CC) $(FLAGS) -c $< -o $@
+
+clean :
 	rm $(OBJ)
+	rm $(TEST_OBJ)
 	rm $(MAIN)
 	rm $(TEST)
