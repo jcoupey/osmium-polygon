@@ -39,6 +39,26 @@ struct PolygonHandler : public osmium::handler::Handler{
       _writer(std::move(node));
     }
   }
+
+  void way(osmium::Way& way){
+    ++_all_ways;
+    // Only keep ways which have a node in the polygon.
+    bool keep_way = false;
+    for (auto& node_ref : way.nodes()){
+      try{
+        _index_pos.get(static_cast<osmium::unsigned_object_id_type>(node_ref.ref()));
+        // No exception means this way contains a node in the polygon.
+        keep_way = true;
+        break;
+      }
+      catch (osmium::not_found&){}
+    }
+
+    if(keep_way){
+      ++_ways_in_polygon;
+      _writer(std::move(way));
+    }
+  }
 };
 
 int parse_file(std::string input_name,
@@ -51,20 +71,22 @@ int parse_file(std::string input_name,
     std::cerr << "Can not open node cache file '" << "': " << strerror(errno) << "\n";
     return 1;
   }
-
   index_pos_type index_pos{fd};
 
   // First pass: filtering nodes and remember relevant locations.
   std::cout << "Parsing nodes...\n";
   osmium::io::File infile(input_name);
 
-  osmium::io::Reader reader_1(infile,
-                              osmium::osm_entity_bits::node);
+  osmium::io::Reader reader_1(infile, osmium::osm_entity_bits::node);
 
   osmium::io::Header header = reader_1.header();
   header.set("generator", "osmium-polygon");
 
-  PolygonHandler polygon_handler(output_name, header, polygon, index_pos);
+  PolygonHandler polygon_handler(output_name,
+                                 header,
+                                 polygon,
+                                 index_pos);
+
   osmium::apply(reader_1, polygon_handler);
 
   std::cout << "Done, kept "
@@ -75,6 +97,18 @@ int parse_file(std::string input_name,
             << polygon_handler._all_nodes
             << ".\n";
   reader_1.close();
+
+  // Second pass to filter ways.
+  osmium::io::Reader reader_2(infile, osmium::osm_entity_bits::way);
+  osmium::apply(reader_2, polygon_handler);
+
+  std::cout << "Done, kept "
+            << polygon_handler._ways_in_polygon
+            << " ways in "
+            << polygon.get_name()
+            << " out of "
+            << polygon_handler._all_ways
+            << ".\n";
 
   std::remove(nodes_file.c_str());
 
