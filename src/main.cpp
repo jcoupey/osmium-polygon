@@ -12,10 +12,47 @@ All rights reserved (see LICENSE).
 #include "polygon.h"
 #include "osm_parser.h"
 
+void display_usage()
+{
+  std::string usage = "Usage : osmium-polygon [-o=OUT] FILE\n";
+  usage += "Crop OSM data in FILE using polygon a write it to OUT.";
+  std::cout << usage << std::endl;
+  exit(0);
+}
+
 int main(int argc, char* argv[]){
   // File names.
-  std::string input_name = argv[1];
-  std::string output_name = "polygon_" + input_name;
+  std::string input_name;
+  std::string output_name;
+
+  // Parsing command-line options
+  const char* optString = "o:h?";
+
+  int opt = getopt(argc, argv, optString);
+
+  while(opt != -1){
+    switch(opt){
+    case 'o':
+      output_name = optarg;
+      break;
+    default:
+      // Shouldn't be used.
+      break;
+    }
+    opt = getopt(argc, argv, optString);
+  }
+
+  // Getting input file from command-line.
+  if(argc == optind){
+    // No input file given!
+    display_usage();
+  }
+  input_name = argv[optind];
+
+  if(output_name.empty()){
+    // Default output name.
+    output_name = "polygon_" + input_name;
+  }
 
   // Define custom polygon.
   polygon my_poly("Strange shape in Berlin",

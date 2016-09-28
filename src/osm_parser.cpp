@@ -131,10 +131,10 @@ int parse_file(std::string input_name,
 
   std::cout << "Done, kept "
             << polygon_handler._nodes_in_polygon
-            << " nodes in "
-            << polygon.get_name()
-            << " out of "
+            << " nodes out of "
             << polygon_handler._all_nodes
+            << " in "
+            << polygon.get_name()
             << ".\n";
   reader_1.close();
 
