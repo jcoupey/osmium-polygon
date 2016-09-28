@@ -12,6 +12,7 @@ All rights reserved (see LICENSE).
 
 #include <cstdio>
 #include <algorithm>
+#include <unordered_set>
 #include <osmium/io/any_input.hpp>
 #include <osmium/io/any_output.hpp>
 #include <osmium/handler.hpp>
