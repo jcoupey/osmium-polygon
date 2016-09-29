@@ -28,6 +28,27 @@ polygon::polygon(const std::string& name,
                 [&](const auto& n){_bbox.extend(n);});
 }
 
+polygon::polygon(const rapidjson::Value& feature):
+  _name(feature["properties"]["name"].GetString()){
+  // Set corners and bounding box.
+  std::for_each(feature["geometry"]["coordinates"][0].Begin(),
+                feature["geometry"]["coordinates"][0].End(),
+                [&](const auto& c){
+                  _corners.emplace_back(c[0].GetDouble(),
+                                        c[1].GetDouble());
+                  _bbox.extend(_corners.back());
+                });
+
+  // Stop if first and end corners are different.
+  if (_corners[0] != _corners[_corners.size() - 1]){
+    std::cout << "Bad polygon "
+              << _name
+              << ", first and last coordinates do not match."
+              << std::endl;
+    exit(0);
+  }
+}
+
 // Uses the (l1l2)x(l1l0) cross product z-component to check the
 // relative position between l0 and the oriented line defined by l1
 // and l2.

@@ -14,6 +14,7 @@ All rights reserved (see LICENSE).
 #include <algorithm>
 #include <osmium/osm/box.hpp>
 #include <osmium/osm/node.hpp>
+#include "../include/rapidjson/document.h"
 
 class polygon{
 private:
@@ -26,6 +27,8 @@ private:
 public:
   polygon(const std::string& name,
           const std::vector<osmium::Location>& nodes);
+
+  polygon(const rapidjson::Value& feature);
 
   std::string get_name() const;
 
