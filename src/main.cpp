@@ -11,12 +11,15 @@ All rights reserved (see LICENSE).
 #include <fstream>
 #include "polygon.h"
 #include "osm_parser.h"
+#include "../include/rapidjson/document.h"
+#include "../include/rapidjson/error/en.h"
 
-void display_usage()
-{
-  std::string usage = "Usage : osmium-polygon [-o=OUT] FILE\n";
-  usage += "Crop OSM data in FILE using polygon a write it to OUT.";
-  std::cout << usage << std::endl;
+void display_usage(){
+  std::string usage = "Usage : osmium-polygon -p GEOJSON_FILE [-o=OUT] OSM_FILE\n";
+  usage += "Crop OSM data in FILE using the first polygon in GEOJSON_FILE and write it to OUT.\n";
+  usage += "\t-p GEOJSON_FILE\t geojson file containing the polygon\n";
+  usage += "\t-o OUTPUT\t output file name\n";
+  std::cout << usage;
   exit(0);
 }
 
@@ -24,9 +27,10 @@ int main(int argc, char* argv[]){
   // File names.
   std::string input_name;
   std::string output_name;
+  std::string poly_name;
 
   // Parsing command-line options
-  const char* optString = "o:h?";
+  const char* optString = "o:p:h?";
 
   int opt = getopt(argc, argv, optString);
 
@@ -34,6 +38,9 @@ int main(int argc, char* argv[]){
     switch(opt){
     case 'o':
       output_name = optarg;
+      break;
+    case 'p':
+      poly_name = optarg;
       break;
     default:
       // Shouldn't be used.
@@ -54,10 +61,56 @@ int main(int argc, char* argv[]){
     output_name = "polygon_" + input_name;
   }
 
-  // Define custom polygon.
-  polygon my_poly("Strange shape in Berlin",
-                  std::vector<osmium::Location>({{13.391647338867186,52.51705655410405},{13.394737243652344,52.549636074382285},{13.452072143554686,52.520190250694526},{13.400230407714844,52.506818254212604},{13.455848693847656,52.495741489296144},{13.381690979003906,52.48612543090344},{13.386840820312498,52.50640031375409},{13.330192565917967,52.49741363265356},{13.348731994628904,52.534811212925774},{13.391647338867186,52.51705655410405}}));
+  // Parsing input file for polygons.
+  if(poly_name.empty()){
+    display_usage();
+  }
+  std::cout << "Parsing geojson file, searching for a polygon...\n";
 
-  return parse_file(input_name, output_name, my_poly);
+  rapidjson::Document json_input;
+  std::string error_msg;
+
+  std::ifstream ifs (poly_name);
+  std::stringstream buffer;
+  buffer << ifs.rdbuf();
+
+  if(json_input.Parse(buffer.str().c_str()).HasParseError()){
+      std::string error_msg = std::string(rapidjson::GetParseError_En(json_input.GetParseError()))
+        + " (offset: "
+        + std::to_string(json_input.GetErrorOffset())
+        + ")";
+      std::cout << error_msg << std::endl;
+      exit(1);
+  }
+
+  if(!json_input.HasMember("features")
+     or !json_input["features"].IsArray()){
+    std::cout << "Invalid \"features\" key.\n";
+    exit(1);
+  }
+
+  // Finding the first polygon feature in the json file.
+  for(rapidjson::SizeType i = 0; i < json_input["features"].Size(); ++i){
+    auto& feature = json_input["features"][i];
+    if(!feature.HasMember("properties")
+       or !feature["properties"].HasMember("name")
+       or !feature["properties"]["name"].IsString()
+       or !feature.HasMember("geometry")
+       or !feature["geometry"].HasMember("type")
+       or !feature["geometry"]["type"].IsString()
+       or feature["geometry"]["type"] != "Polygon"
+       or !feature["geometry"].HasMember("coordinates")
+       or !feature["geometry"]["coordinates"].IsArray()){
+      continue;
+    }
+    std::cout << "Done, using polygon "
+              << feature["properties"]["name"].GetString()
+              << '\n';
+    return parse_file(input_name, output_name, {feature});
+  }
+
+  std::cout << "No polygon feature with a name in file: "
+            << poly_name << "!\n";
+  return 0;
 }
 

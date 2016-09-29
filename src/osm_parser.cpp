@@ -125,7 +125,7 @@ int parse_file(std::string input_name,
                                  outside_nodes,
                                  writer);
 
-  std::cout << "Parsing nodes...\n";
+  std::cout << "Parsing nodes in " << input_name << "...\n";
 
   osmium::apply(reader_1, polygon_handler);
 
@@ -141,7 +141,7 @@ int parse_file(std::string input_name,
   // Second pass to filter ways.
   osmium::io::Reader reader_2(infile, osmium::osm_entity_bits::way);
 
-  std::cout << "Parsing ways...\n";
+  std::cout << "Parsing ways in " << input_name << "...\n";
   osmium::apply(reader_2, polygon_handler);
 
   std::cout << "Done, kept "
