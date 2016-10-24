@@ -14,22 +14,29 @@ struct PolygonHandler : public osmium::handler::Handler{
   uint64_t _nodes_in_polygon;
   uint32_t _all_ways;
   uint32_t _ways_in_polygon;
+  uint32_t _all_relations;
+  uint32_t _relations_in_polygon;
   const polygon& _polygon;
   index_pos_type& _index_pos;
   std::unordered_set<osmium::object_id_type>& _outside_nodes;
+  std::unordered_set<osmium::object_id_type>& _inside_ways;
   osmium::io::Writer& _writer;
 
   PolygonHandler(const polygon& polygon,
                  index_pos_type& index_pos,
                  std::unordered_set<osmium::object_id_type>& outside_nodes,
+                 std::unordered_set<osmium::object_id_type>& inside_ways,
                  osmium::io::Writer& writer):
     _all_nodes(0),
     _nodes_in_polygon(0),
     _all_ways(0),
     _ways_in_polygon(0),
+    _all_relations(0),
+    _relations_in_polygon(0),
     _polygon(polygon),
     _index_pos(index_pos),
     _outside_nodes(outside_nodes),
+    _inside_ways(inside_ways),
     _writer(writer){}
 
   void node(osmium::Node& node){
@@ -50,7 +57,9 @@ struct PolygonHandler : public osmium::handler::Handler{
     for (auto& node_ref : way.nodes()){
       try{
         _index_pos.get(static_cast<osmium::unsigned_object_id_type>(node_ref.ref()));
-        // No exception means this way contains a node in the polygon.
+        // No exception means this way contains a node in the polygon
+        // (node inclusion has already been tested during the first
+        // "node" pass).
         keep_way = true;
         break;
       }
@@ -68,14 +77,47 @@ struct PolygonHandler : public osmium::handler::Handler{
           _outside_nodes.insert(node_ref.ref());
         }
       }
+      _inside_ways.insert(way.id());
       _writer(std::move(way));
+    }
+  }
+
+  void relation(osmium::Relation& relation){
+    ++_all_relations;
+    // Keep relations which have a node in the polygon.
+    bool keep_relation = false;
+    for (auto& rm : relation.members()){
+      if(rm.type() == osmium::item_type::node){
+        // Keep relations that have a node member in the polygon.
+        try{
+          _index_pos.get(static_cast<osmium::unsigned_object_id_type>(rm.ref()));
+          // No exception means this node is a member of the relation
+          // that has already been tested as included in the polygon.
+          keep_relation = true;
+          break;
+        }
+        catch (osmium::not_found&){}
+      }
+      if(rm.type() == osmium::item_type::way){
+        // Also keep relations that have a way member in the polygon.
+        if(_inside_ways.find(static_cast<osmium::unsigned_object_id_type>(rm.ref()))
+           != _inside_ways.end()){
+          keep_relation = true;
+          break;
+        }
+      }
+    }
+
+    if(keep_relation){
+      ++_relations_in_polygon;
+      _writer(std::move(relation));
     }
   }
 };
 
 struct OutsideNodesHandler : public osmium::handler::Handler{
   uint64_t _nodes_outside;
-  std::unordered_set<osmium::object_id_type>& _outside_nodes;
+  const std::unordered_set<osmium::object_id_type>& _outside_nodes;
   osmium::io::Writer& _writer;
 
   OutsideNodesHandler(std::unordered_set<osmium::object_id_type>& outside_nodes,
@@ -108,7 +150,11 @@ int parse_file(std::string input_name,
   // that is kept (it has another node inside the polygon).
   std::unordered_set<osmium::object_id_type> outside_nodes;
 
-  // First pass: filtering nodes and remember relevant locations.
+  // Used to keep track of kept ways for further relation filtering.
+  std::unordered_set<osmium::object_id_type> inside_ways;
+
+  // A pass through nodes: filtering nodes and remembering relevant
+  // locations.
   osmium::io::File infile(input_name);
 
   osmium::io::Reader reader_1(infile, osmium::osm_entity_bits::node);
@@ -123,6 +169,7 @@ int parse_file(std::string input_name,
   PolygonHandler polygon_handler(polygon,
                                  index_pos,
                                  outside_nodes,
+                                 inside_ways,
                                  writer);
 
   std::cout << "Parsing nodes in " << input_name << "...\n";
@@ -138,7 +185,7 @@ int parse_file(std::string input_name,
             << ".\n";
   reader_1.close();
 
-  // Second pass to filter ways.
+  // A pass to filter ways.
   osmium::io::Reader reader_2(infile, osmium::osm_entity_bits::way);
 
   std::cout << "Parsing ways in " << input_name << "...\n";
@@ -152,7 +199,7 @@ int parse_file(std::string input_name,
             << polygon_handler._all_ways
             << ".\n";
 
-  // Third pass to make ways complete, adding outside nodes.
+  // Another pass through nodes to make sure ways are complete.
   OutsideNodesHandler outside_nodes_handler(outside_nodes, writer);
 
   osmium::io::Reader reader_3(infile, osmium::osm_entity_bits::node);
@@ -165,7 +212,21 @@ int parse_file(std::string input_name,
             << outside_nodes_handler._nodes_outside
             << " nodes outside "
             << polygon.get_name()
-            << " to complete all ways\n";
+            << " to complete all ways.\n";
+
+  // A pass to filter relations.
+  osmium::io::Reader reader_4(infile, osmium::osm_entity_bits::relation);
+
+  std::cout << "Parsing relations in " << input_name << "...\n";
+  osmium::apply(reader_4, polygon_handler);
+
+  std::cout << "Done, kept "
+            << polygon_handler._relations_in_polygon
+            << " relations in "
+            << polygon.get_name()
+            << " out of "
+            << polygon_handler._all_relations
+            << ".\n";
 
   std::remove(nodes_file.c_str());
 

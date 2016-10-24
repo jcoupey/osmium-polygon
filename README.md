@@ -4,17 +4,17 @@ This project is the result of playing around with
 [libosmium](https://github.com/osmcode/libosmium) and polygon
 inclusion.
 
-So far, it allows to extract all nodes and ways in an OSM data file
-with regard to inclusion in a custom polygon.
-
-![berlin](/files/berlin_heart.png)
-
-**Notes**
+So far, it allows to extract all nodes, ways and relations in an OSM
+data file with regard to inclusion in a custom polygon.
 
 - Nodes included in the polygon are kept.
-- Ways that have at least a node in the polygon are kept (with all
-their nodes).
-- Relations are not handled at all so far!
+- Ways containing at least a node in the polygon are kept and stay
+  complete (even their nodes that are not in the polygon are
+  included).
+- Relations that have at least one node or a way member in the polygon
+  are included with all their members (not reference-complete).
+
+![berlin](/files/berlin_heart.png)
 
 # Build
 

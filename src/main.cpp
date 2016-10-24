@@ -105,7 +105,7 @@ int main(int argc, char* argv[]){
     }
     std::cout << "Done, using polygon "
               << feature["properties"]["name"].GetString()
-              << '\n';
+              << ".\n";
     return parse_file(input_name, output_name, {feature});
   }
 
