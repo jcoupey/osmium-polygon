@@ -14,7 +14,19 @@ data file with regard to inclusion in a custom polygon.
 - Relations that have at least one node or a way member in the polygon
   are included with all their members (not reference-complete).
 
-![berlin](/files/berlin_heart.png)
+# Examples
+
+## Single polygon
+
+Using [this geojson file](/files/berlin_heart.geojson).
+
+![berlin heart](/files/berlin_heart.png)
+
+## Polygon with a hole
+
+Using [this geojson file](/files/berlin_ring.geojson).
+
+![berlin ring](/files/berlin_ring.png)
 
 # Build
 
