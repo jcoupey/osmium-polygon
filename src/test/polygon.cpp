@@ -10,12 +10,26 @@ All rights reserved (see LICENSE).
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Polygon
 #include <boost/test/unit_test.hpp>
+#include "../../include/rapidjson/document.h"
 #include "../polygon.h"
 
+struct test_data{
+  rapidjson::Document json_data;
+  test_data(std::string str_array){
+    std::string json_string = "{\"content\":" + str_array + "}";
+    json_data.Parse(json_string.c_str());
+  }
+  rapidjson::Value get_data(){
+    return std::move(json_data["content"]);
+  }
+};
+
 struct init_state_box{
+  test_data json;
   polygon p;
-  init_state_box(): p("Box",
-                      {{0.0, 0.0}, {20.0, 0.0}, {20.0, 50.0}, {0.0, 50.0}, {0.0, 0.0}}) {}
+  init_state_box():
+    json("[[[0.0,0.0],[20.0,0.0],[20.0,50.0],[0.0,50.0],[0.0,0.0]]]"),
+    p("Box", json.get_data()){}
 };
 
 BOOST_FIXTURE_TEST_SUITE(box_checks, init_state_box)
@@ -58,9 +72,11 @@ BOOST_AUTO_TEST_CASE(box_no_contains_outside){
 BOOST_AUTO_TEST_SUITE_END()
 
 struct init_state_losange{
+  test_data json;
   polygon p;
-  init_state_losange(): p("Losange",
-                          {{20.0, 0.0}, {0.0, 40.0}, {-20.0, 0.0}, {0.0, -40.0}, {20.0, 0.0}}) {}
+  init_state_losange():
+    json("[[[20.0,0.0],[0.0,40.0],[-20.0,0.0],[0.0,-40.0],[20.0,0.0]]]"),
+    p("Losange", json.get_data()){}
 };
 
 BOOST_FIXTURE_TEST_SUITE(losange_checks, init_state_losange)
@@ -124,15 +140,17 @@ BOOST_AUTO_TEST_CASE(losange_no_contains_outside){
 BOOST_AUTO_TEST_SUITE_END()
 
 struct init_state_poly_test{
+  test_data json;
   polygon p;
-  init_state_poly_test(): p("Test",
-                            {{2.30, 48.83},{2.25, 48.84},{2.25, 48.86},{2.28, 48.87},{2.31, 48.86},{2.29, 48.88},{2.33, 48.88},{2.36, 48.87},{2.37, 48.86},{2.35, 48.85},{2.38, 48.84},{2.38, 48.83},{2.345, 48.83},{2.34, 48.835},{2.33, 48.828},{2.325, 48.82},{2.30, 48.83}}) {}
+  init_state_poly_test():
+    json("[[[2.30,48.83],[2.25,48.84],[2.25,48.86],[2.28,48.87],[2.31,48.86],[2.29,48.88],[2.33,48.88],[2.36,48.87],[2.37,48.86],[2.35,48.85],[2.38,48.84],[2.38,48.83],[2.345,48.83],[2.34,48.835],[2.33,48.828],[2.325,48.82],[2.30,48.83]]]"),
+    p("More detailed polygon", json.get_data()){}
 };
 
 BOOST_FIXTURE_TEST_SUITE(poly_test_checks, init_state_poly_test)
 
 BOOST_AUTO_TEST_CASE(poly_test_name){
-  BOOST_CHECK(p.get_name() == "Test");
+  BOOST_CHECK(p.get_name() == "More detailed polygon");
 }
 
 BOOST_AUTO_TEST_CASE(poly_test_contains_nodes){
@@ -238,6 +256,82 @@ BOOST_AUTO_TEST_CASE(poly_test_no_contains_outside){
   BOOST_CHECK(!p.contains({2.2954559326171875, 48.827322434132746}));
   BOOST_CHECK(!p.contains({2.3021507263183594, 48.82268881260476}));
   BOOST_CHECK(!p.contains({2.264556884765625, 48.82415805606007}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+struct init_state_poly_hole_test{
+  test_data json;
+  polygon p;
+  init_state_poly_hole_test():
+    json("[[[3.0,1.0],[1.0,3.0],[1.0,7.0],[3.0,5.0],[5.0,7.0],[7.0,5.0],[7.0,3.0],[5.0,1.0],[3.0,1.0]],[[4.0,3.0],[3.0,4.0],[5.0,4.0],[4.0,3.0]]]"),
+    p("Polygon with a hole", json.get_data()){}
+};
+
+BOOST_FIXTURE_TEST_SUITE(poly_hole_test_checks, init_state_poly_hole_test)
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_name){
+  BOOST_CHECK(p.get_name() == "Polygon with a hole");
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_nodes){
+  BOOST_CHECK(p.contains({1.0, 3.0}));
+  BOOST_CHECK(p.contains({3.0, 1.0}));
+  BOOST_CHECK(p.contains({3.0, 5.0}));
+  // Right-side boundaries are outside.
+  BOOST_CHECK(!p.contains({1.0, 7.0}));
+  BOOST_CHECK(!p.contains({5.0,7.0}));
+  BOOST_CHECK(!p.contains({7.0, 5.0}));
+  BOOST_CHECK(!p.contains({7.0, 3.0}));
+  BOOST_CHECK(!p.contains({5.0, 1.0}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_limits){
+  BOOST_CHECK(p.contains({4.0, 1.0}));
+  BOOST_CHECK(p.contains({2.0, 2.0}));
+  BOOST_CHECK(p.contains({1.0, 4.0}));
+  BOOST_CHECK(p.contains({1.0, 6.0}));
+  BOOST_CHECK(p.contains({1.0, 6.0}));
+  BOOST_CHECK(p.contains({4.0, 6.0}));
+  // Right-side boundaries are outside.
+  BOOST_CHECK(!p.contains({2.0, 6.0}));
+  BOOST_CHECK(!p.contains({6.0, 6.0}));
+  BOOST_CHECK(!p.contains({7.0, 4.0}));
+  BOOST_CHECK(!p.contains({6.0, 2.0}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_inside){
+  // Not in the hole.
+  BOOST_CHECK(p.contains({3.0, 2.0}));
+  BOOST_CHECK(p.contains({2.0, 4.0}));
+  BOOST_CHECK(p.contains({4.0, 2.5}));
+  BOOST_CHECK(p.contains({5.0, 5.0}));
+  BOOST_CHECK(p.contains({5.0, 6.0}));
+  BOOST_CHECK(p.contains({6.0, 4.5}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_no_contains_outside){
+  // Outside bounding box, near the nodes.
+  BOOST_CHECK(!p.contains({5.0, 0.9}));
+  BOOST_CHECK(!p.contains({1.0, 7.1}));
+  // In the bouding box but not in the polygon!
+  BOOST_CHECK(!p.contains({3.0, 6.0}));
+  BOOST_CHECK(!p.contains({6.0, 1.5}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_exclude_hole){
+  // In the hole.
+  BOOST_CHECK(!p.contains({4.0, 3.5}));
+  BOOST_CHECK(!p.contains({3.8, 3.9}));
+  BOOST_CHECK(!p.contains({4.7, 3.9}));
+  // Checking hole nodes (none contained in the hole).
+  BOOST_CHECK(p.contains({3.0, 4.0}));
+  BOOST_CHECK(p.contains({5.0, 4.0}));
+  BOOST_CHECK(p.contains({4.0, 3.0}));
+  // Checking hole boundaries.
+  BOOST_CHECK(!p.contains({3.5, 3.5}));
+  BOOST_CHECK(p.contains({4.0, 4.0}));
+  BOOST_CHECK(p.contains({4.6, 3.6}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

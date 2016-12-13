@@ -7,27 +7,24 @@ All rights reserved (see LICENSE).
 
 */
 
-#ifndef POLYGON_H
-#define POLYGON_H
+#ifndef RING_H
+#define RING_H
 
 #include <vector>
-#include <string>
+#include <algorithm>
 #include <osmium/osm/box.hpp>
 #include <osmium/osm/node.hpp>
 #include "../include/rapidjson/document.h"
-#include "ring.h"
 
-class polygon{
+class ring{
 private:
-  std::string _name;
-  ring _outer_ring;
-  std::vector<ring> _inner_rings;
+  std::vector<osmium::Location> _corners;
+  osmium::Box _bbox;
+
+  bool is_in_ring(const osmium::Location& loc) const;
 
 public:
-  polygon(const std::string& name,
-          const rapidjson::Value& json_rings);
-
-  std::string get_name() const;
+  ring(const rapidjson::Value& json_ring);
 
   bool contains(const osmium::Location& loc) const;
 
