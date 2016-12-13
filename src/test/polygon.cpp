@@ -259,3 +259,79 @@ BOOST_AUTO_TEST_CASE(poly_test_no_contains_outside){
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+struct init_state_poly_hole_test{
+  test_data json;
+  polygon p;
+  init_state_poly_hole_test():
+    json("[[[3.0,1.0],[1.0,3.0],[1.0,7.0],[3.0,5.0],[5.0,7.0],[7.0,5.0],[7.0,3.0],[5.0,1.0],[3.0,1.0]],[[4.0,3.0],[3.0,4.0],[5.0,4.0],[4.0,3.0]]]"),
+    p("Polygon with a hole", json.get_data()){}
+};
+
+BOOST_FIXTURE_TEST_SUITE(poly_hole_test_checks, init_state_poly_hole_test)
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_name){
+  BOOST_CHECK(p.get_name() == "Polygon with a hole");
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_nodes){
+  BOOST_CHECK(p.contains({1.0, 3.0}));
+  BOOST_CHECK(p.contains({3.0, 1.0}));
+  BOOST_CHECK(p.contains({3.0, 5.0}));
+  // Right-side boundaries are outside.
+  BOOST_CHECK(!p.contains({1.0, 7.0}));
+  BOOST_CHECK(!p.contains({5.0,7.0}));
+  BOOST_CHECK(!p.contains({7.0, 5.0}));
+  BOOST_CHECK(!p.contains({7.0, 3.0}));
+  BOOST_CHECK(!p.contains({5.0, 1.0}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_limits){
+  BOOST_CHECK(p.contains({4.0, 1.0}));
+  BOOST_CHECK(p.contains({2.0, 2.0}));
+  BOOST_CHECK(p.contains({1.0, 4.0}));
+  BOOST_CHECK(p.contains({1.0, 6.0}));
+  BOOST_CHECK(p.contains({1.0, 6.0}));
+  BOOST_CHECK(p.contains({4.0, 6.0}));
+  // Right-side boundaries are outside.
+  BOOST_CHECK(!p.contains({2.0, 6.0}));
+  BOOST_CHECK(!p.contains({6.0, 6.0}));
+  BOOST_CHECK(!p.contains({7.0, 4.0}));
+  BOOST_CHECK(!p.contains({6.0, 2.0}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_contains_inside){
+  // Not in the hole.
+  BOOST_CHECK(p.contains({3.0, 2.0}));
+  BOOST_CHECK(p.contains({2.0, 4.0}));
+  BOOST_CHECK(p.contains({4.0, 2.5}));
+  BOOST_CHECK(p.contains({5.0, 5.0}));
+  BOOST_CHECK(p.contains({5.0, 6.0}));
+  BOOST_CHECK(p.contains({6.0, 4.5}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_no_contains_outside){
+  // Outside bounding box, near the nodes.
+  BOOST_CHECK(!p.contains({5.0, 0.9}));
+  BOOST_CHECK(!p.contains({1.0, 7.1}));
+  // In the bouding box but not in the polygon!
+  BOOST_CHECK(!p.contains({3.0, 6.0}));
+  BOOST_CHECK(!p.contains({6.0, 1.5}));
+}
+
+BOOST_AUTO_TEST_CASE(poly_hole_test_exclude_hole){
+  // In the hole.
+  BOOST_CHECK(!p.contains({4.0, 3.5}));
+  BOOST_CHECK(!p.contains({3.8, 3.9}));
+  BOOST_CHECK(!p.contains({4.7, 3.9}));
+  // Checking hole nodes (none contained in the hole).
+  BOOST_CHECK(p.contains({3.0, 4.0}));
+  BOOST_CHECK(p.contains({5.0, 4.0}));
+  BOOST_CHECK(p.contains({4.0, 3.0}));
+  // Checking hole boundaries.
+  BOOST_CHECK(!p.contains({3.5, 3.5}));
+  BOOST_CHECK(p.contains({4.0, 4.0}));
+  BOOST_CHECK(p.contains({4.6, 3.6}));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
