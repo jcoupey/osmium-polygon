@@ -11,24 +11,21 @@ All rights reserved (see LICENSE).
 #define POLYGON_H
 
 #include <vector>
-#include <algorithm>
+#include <string>
 #include <osmium/osm/box.hpp>
 #include <osmium/osm/node.hpp>
 #include "../include/rapidjson/document.h"
+#include "ring.h"
 
 class polygon{
 private:
   std::string _name;
-  std::vector<osmium::Location> _corners;
-  osmium::Box _bbox;
-
-  bool is_in_polygon(const osmium::Location& loc) const;
+  ring _outer_ring;
+  std::vector<ring> _inner_rings;
 
 public:
   polygon(const std::string& name,
-          const std::vector<osmium::Location>& nodes);
-
-  polygon(const rapidjson::Value& feature);
+          const rapidjson::Value& json_rings);
 
   std::string get_name() const;
 

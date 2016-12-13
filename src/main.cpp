@@ -103,10 +103,14 @@ int main(int argc, char* argv[]){
        or !feature["geometry"]["coordinates"].IsArray()){
       continue;
     }
+    std::string polygon_name = feature["properties"]["name"].GetString();
     std::cout << "Done, using polygon "
-              << feature["properties"]["name"].GetString()
+              << polygon_name
               << ".\n";
-    return parse_file(input_name, output_name, {feature});
+
+    polygon current_polygon(polygon_name, feature["geometry"]["coordinates"]);
+
+    return parse_file(input_name, output_name, current_polygon);
   }
 
   std::cout << "No polygon feature with a name in file: "
