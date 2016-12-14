@@ -99,7 +99,8 @@ int main(int argc, char* argv[]){
     if(!feature.HasMember("geometry")
        or !feature["geometry"].HasMember("type")
        or !feature["geometry"]["type"].IsString()
-       or feature["geometry"]["type"] != "Polygon"
+       or (feature["geometry"]["type"] != "Polygon"
+           and feature["geometry"]["type"] != "MultiPolygon")
        or !feature["geometry"].HasMember("coordinates")
        or !feature["geometry"]["coordinates"].IsArray()){
       continue;
@@ -120,8 +121,17 @@ int main(int argc, char* argv[]){
       current_name = "feature_" + std::to_string(i);
       }
 
-    polygons.emplace_back(current_name,
-                          feature["geometry"]["coordinates"]);
+    if(feature["geometry"]["type"] == "Polygon"){
+      polygons.emplace_back(current_name,
+                            feature["geometry"]["coordinates"]);
+    }
+    if(feature["geometry"]["type"] == "MultiPolygon"){
+      auto& coordinates = feature["geometry"]["coordinates"];
+      for(rapidjson::SizeType i = 0; i < coordinates.Size(); ++i){
+        polygons.emplace_back(current_name + "_" + std::to_string(i),
+                              coordinates[i]);
+      }
+    }
   }
 
   if(polygons.empty()){
