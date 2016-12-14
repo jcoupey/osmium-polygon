@@ -89,12 +89,12 @@ int main(int argc, char* argv[]){
     exit(1);
   }
 
+  std::vector<std::string> name_keys({"name", "id", "ID"});
+
   // Finding the first polygon feature in the json file.
   for(rapidjson::SizeType i = 0; i < json_input["features"].Size(); ++i){
     auto& feature = json_input["features"][i];
     if(!feature.HasMember("properties")
-       or !feature["properties"].HasMember("name")
-       or !feature["properties"]["name"].IsString()
        or !feature.HasMember("geometry")
        or !feature["geometry"].HasMember("type")
        or !feature["geometry"]["type"].IsString()
@@ -103,17 +103,30 @@ int main(int argc, char* argv[]){
        or !feature["geometry"]["coordinates"].IsArray()){
       continue;
     }
-    std::string polygon_name = feature["properties"]["name"].GetString();
+    std::string current_name;
+    for(const auto& name: name_keys){
+      if(feature["properties"].HasMember(name.c_str())
+         and feature["properties"][name.c_str()].IsString()){
+        // Using property name.
+        current_name = feature["properties"][name.c_str()].GetString();
+        break;
+      }
+    }
+    if(current_name.empty()){
+      // Default to feature index.
+      current_name = "feature_" + std::to_string(i);
+      }
+
     std::cout << "Done, using polygon "
-              << polygon_name
+              << current_name
               << ".\n";
 
-    polygon current_polygon(polygon_name, feature["geometry"]["coordinates"]);
+    polygon current_polygon(current_name, feature["geometry"]["coordinates"]);
 
     return parse_file(input_name, output_name, current_polygon);
   }
 
-  std::cout << "No polygon feature with a name in file: "
+  std::cout << "No polygon feature found in file: "
             << poly_name << "!\n";
   return 0;
 }
