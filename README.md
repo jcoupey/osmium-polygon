@@ -4,15 +4,17 @@ This project is the result of playing around with
 [libosmium](https://github.com/osmcode/libosmium) and polygon
 inclusion.
 
-So far, it allows to extract all nodes, ways and relations in an OSM
-data file with regard to inclusion in a custom polygon.
+It allows to extract all nodes, ways and relations in an OSM data file
+with regard to inclusion in a set of (multi-)polygons defined in a
+simple `geojson` file.
 
-- Nodes included in the polygon are kept.
-- Ways containing at least a node in the polygon are kept and stay
-  complete (even their nodes that are not in the polygon are
+- Nodes included in the polygons are kept.
+- Ways containing at least a node in the polygons are kept and stay
+  complete (even their nodes that are not in the polygons are
   included).
-- Relations that have at least one node or a way member in the polygon
-  are included with all their members (not reference-complete).
+- Relations that have at least one node or a way member in the
+  polygons are included with all their members (not
+  reference-complete).
 
 # Examples
 
@@ -27,6 +29,12 @@ Using [this geojson file](/files/berlin_heart.geojson).
 Using [this geojson file](/files/berlin_ring.geojson).
 
 ![berlin ring](/files/berlin_ring.png)
+
+## Several (multi-)polygons
+
+Using [this geojson file](/files/berlin_flower.geojson).
+
+![berlin flower](/files/berlin_flower.png)
 
 # Build
 
