@@ -65,7 +65,7 @@ int main(int argc, char* argv[]){
   if(poly_name.empty()){
     display_usage();
   }
-  std::cout << "Parsing geojson file, searching for a polygon...\n";
+  std::cout << "Parsing geojson file, searching for polygons...\n";
 
   rapidjson::Document json_input;
   std::string error_msg;
@@ -90,6 +90,8 @@ int main(int argc, char* argv[]){
   }
 
   std::vector<std::string> name_keys({"name", "id", "ID"});
+
+  std::vector<polygon> polygons;
 
   // Finding the first polygon feature in the json file.
   for(rapidjson::SizeType i = 0; i < json_input["features"].Size(); ++i){
@@ -117,17 +119,20 @@ int main(int argc, char* argv[]){
       current_name = "feature_" + std::to_string(i);
       }
 
-    std::cout << "Done, using polygon "
-              << current_name
-              << ".\n";
-
-    polygon current_polygon(current_name, feature["geometry"]["coordinates"]);
-
-    return parse_file(input_name, output_name, current_polygon);
+    polygons.emplace_back(current_name,
+                          feature["geometry"]["coordinates"]);
   }
 
-  std::cout << "No polygon feature found in file: "
-            << poly_name << "!\n";
-  return 0;
+  if(polygons.empty()){
+    std::cout << "No polygon feature found in file: "
+              << poly_name << "!\n";
+    return 0;
+  }
+  else{
+    std::cout << "Found "
+              << polygons.size()
+              << " polygon feature(s).\n";
+    return parse_file(input_name, output_name, polygons);
+  }
 }
 

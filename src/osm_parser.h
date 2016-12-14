@@ -11,6 +11,7 @@ All rights reserved (see LICENSE).
 #define OSM_PARSER_H
 
 #include <cstdio>
+#include <vector>
 #include <algorithm>
 #include <unordered_set>
 #include <osmium/io/any_input.hpp>
@@ -28,6 +29,6 @@ typedef osmium::index::map::SparseMemArray<osmium::unsigned_object_id_type, osmi
 
 int parse_file(std::string input_name,
                std::string output_name,
-               const polygon& polygon);
+               const std::vector<polygon>& polygons);
 
 #endif
