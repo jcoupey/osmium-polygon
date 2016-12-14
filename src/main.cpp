@@ -65,7 +65,7 @@ int main(int argc, char* argv[]){
   if(poly_name.empty()){
     display_usage();
   }
-  std::cout << "Parsing geojson file, searching for a polygon...\n";
+  std::cout << "Parsing geojson file, searching for polygons...\n";
 
   rapidjson::Document json_input;
   std::string error_msg;
@@ -89,32 +89,61 @@ int main(int argc, char* argv[]){
     exit(1);
   }
 
+  std::vector<std::string> name_keys({"name", "id", "ID"});
+
+  std::vector<polygon> polygons;
+
   // Finding the first polygon feature in the json file.
   for(rapidjson::SizeType i = 0; i < json_input["features"].Size(); ++i){
     auto& feature = json_input["features"][i];
-    if(!feature.HasMember("properties")
-       or !feature["properties"].HasMember("name")
-       or !feature["properties"]["name"].IsString()
-       or !feature.HasMember("geometry")
+    if(!feature.HasMember("geometry")
        or !feature["geometry"].HasMember("type")
        or !feature["geometry"]["type"].IsString()
-       or feature["geometry"]["type"] != "Polygon"
+       or (feature["geometry"]["type"] != "Polygon"
+           and feature["geometry"]["type"] != "MultiPolygon")
        or !feature["geometry"].HasMember("coordinates")
        or !feature["geometry"]["coordinates"].IsArray()){
       continue;
     }
-    std::string polygon_name = feature["properties"]["name"].GetString();
-    std::cout << "Done, using polygon "
-              << polygon_name
-              << ".\n";
+    std::string current_name;
+    if(feature.HasMember("properties")){
+      for(const auto& name: name_keys){
+        if(feature["properties"].HasMember(name.c_str())
+           and feature["properties"][name.c_str()].IsString()){
+          // Using property name.
+          current_name = feature["properties"][name.c_str()].GetString();
+          break;
+        }
+      }
+    }
+    if(current_name.empty()){
+      // Default to feature index.
+      current_name = "feature_" + std::to_string(i);
+      }
 
-    polygon current_polygon(polygon_name, feature["geometry"]["coordinates"]);
-
-    return parse_file(input_name, output_name, current_polygon);
+    if(feature["geometry"]["type"] == "Polygon"){
+      polygons.emplace_back(current_name,
+                            feature["geometry"]["coordinates"]);
+    }
+    if(feature["geometry"]["type"] == "MultiPolygon"){
+      auto& coordinates = feature["geometry"]["coordinates"];
+      for(rapidjson::SizeType i = 0; i < coordinates.Size(); ++i){
+        polygons.emplace_back(current_name + "_" + std::to_string(i),
+                              coordinates[i]);
+      }
+    }
   }
 
-  std::cout << "No polygon feature with a name in file: "
-            << poly_name << "!\n";
-  return 0;
+  if(polygons.empty()){
+    std::cout << "No polygon feature found in file: "
+              << poly_name << "!\n";
+    return 0;
+  }
+  else{
+    std::cout << "Found "
+              << polygons.size()
+              << " polygon feature(s).\n";
+    return parse_file(input_name, output_name, polygons);
+  }
 }
 
