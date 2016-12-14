@@ -96,8 +96,7 @@ int main(int argc, char* argv[]){
   // Finding the first polygon feature in the json file.
   for(rapidjson::SizeType i = 0; i < json_input["features"].Size(); ++i){
     auto& feature = json_input["features"][i];
-    if(!feature.HasMember("properties")
-       or !feature.HasMember("geometry")
+    if(!feature.HasMember("geometry")
        or !feature["geometry"].HasMember("type")
        or !feature["geometry"]["type"].IsString()
        or feature["geometry"]["type"] != "Polygon"
@@ -106,12 +105,14 @@ int main(int argc, char* argv[]){
       continue;
     }
     std::string current_name;
-    for(const auto& name: name_keys){
-      if(feature["properties"].HasMember(name.c_str())
-         and feature["properties"][name.c_str()].IsString()){
-        // Using property name.
-        current_name = feature["properties"][name.c_str()].GetString();
-        break;
+    if(feature.HasMember("properties")){
+      for(const auto& name: name_keys){
+        if(feature["properties"].HasMember(name.c_str())
+           and feature["properties"][name.c_str()].IsString()){
+          // Using property name.
+          current_name = feature["properties"][name.c_str()].GetString();
+          break;
+        }
       }
     }
     if(current_name.empty()){
