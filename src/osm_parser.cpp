@@ -85,7 +85,6 @@ struct PolygonHandler : public osmium::handler::Handler{
         }
       }
       _inside_ways.insert(way.id());
-      _writer(std::move(way));
     }
   }
 
@@ -122,21 +121,30 @@ struct PolygonHandler : public osmium::handler::Handler{
   }
 };
 
-struct OutsideNodesHandler : public osmium::handler::Handler{
+struct OutsideHandler : public osmium::handler::Handler{
   uint64_t _nodes_outside;
   const std::unordered_set<osmium::object_id_type>& _outside_nodes;
+  const std::unordered_set<osmium::object_id_type>& _inside_ways;
   osmium::io::Writer& _writer;
 
-  OutsideNodesHandler(std::unordered_set<osmium::object_id_type>& outside_nodes,
-                      osmium::io::Writer& writer):
+  OutsideHandler(const std::unordered_set<osmium::object_id_type>& outside_nodes,
+                 const std::unordered_set<osmium::object_id_type>& inside_ways,
+                 osmium::io::Writer& writer):
     _nodes_outside(0),
     _outside_nodes(outside_nodes),
+    _inside_ways(inside_ways),
     _writer(writer){}
 
   void node(osmium::Node& node){
     if(_outside_nodes.find(node.id()) != _outside_nodes.end()){
       ++_nodes_outside;
       _writer(std::move(node));
+    }
+  }
+
+  void way(osmium::Way& way){
+    if(_inside_ways.find(way.id()) != _inside_ways.end()){
+      _writer(std::move(way));
     }
   }
 };
@@ -196,23 +204,24 @@ int parse_file(std::string input_name,
   std::cout << "Parsing ways in " << input_name << "...\n";
   osmium::apply(reader_2, polygon_handler);
 
-  std::cout << "Done, kept "
+  std::cout << "Done, keeping "
             << polygon_handler._ways_in_polygons
             << " ways out of "
             << polygon_handler._all_ways
             << ".\n";
 
   // Another pass through nodes to make sure ways are complete.
-  OutsideNodesHandler outside_nodes_handler(outside_nodes, writer);
+  OutsideHandler outside_handler(outside_nodes, inside_ways, writer);
 
-  osmium::io::Reader reader_3(infile, osmium::osm_entity_bits::node);
+  osmium::io::Reader reader_3(infile,
+                              osmium::osm_entity_bits::node | osmium::osm_entity_bits::way);
 
   std::cout << "Making sure all ways are complete...\n";
 
-  osmium::apply(reader_3, outside_nodes_handler);
+  osmium::apply(reader_3, outside_handler);
 
   std::cout << "Done, added "
-            << outside_nodes_handler._nodes_outside
+            << outside_handler._nodes_outside
             << " nodes outside polygon(s) to complete all ways.\n";
 
   // A pass to filter relations.
