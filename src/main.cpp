@@ -16,7 +16,7 @@ All rights reserved (see LICENSE).
 
 void display_usage(){
   std::string usage = "Usage : osmium-polygon -p GEOJSON_FILE [-o=OUT] OSM_FILE\n";
-  usage += "Crop OSM data in FILE using the first polygon in GEOJSON_FILE and write it to OUT.\n";
+  usage += "Crop OSM data in FILE using (multi)-polygons in GEOJSON_FILE and write it to OUT.\n";
   usage += "\t-p GEOJSON_FILE\t geojson file containing the polygon\n";
   usage += "\t-o OUTPUT\t output file name\n";
   std::cout << usage;
