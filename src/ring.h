@@ -10,6 +10,7 @@ All rights reserved (see LICENSE).
 #ifndef RING_H
 #define RING_H
 
+#include <iostream>
 #include <vector>
 #include <algorithm>
 #include <osmium/osm/box.hpp>
