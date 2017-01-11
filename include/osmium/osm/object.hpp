@@ -33,8 +33,6 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
@@ -54,10 +52,18 @@ DEALINGS IN THE SOFTWARE.
 
 namespace osmium {
 
+    namespace builder {
+        template <typename TDerived, typename T>
+        class OSMObjectBuilder;
+    } // namespace builder
+
     /**
      * OSMObject (Node, Way, Relation, or Area).
      */
     class OSMObject : public osmium::OSMEntity {
+
+        template <typename TDerived, typename T>
+        friend class osmium::builder::OSMObjectBuilder;
 
         object_id_type      m_id;
         bool                m_deleted : 1;
@@ -288,6 +294,20 @@ namespace osmium {
             return *this;
         }
 
+        /**
+         * Set the timestamp when this object last changed.
+         *
+         * @param timestamp Timestamp in ISO format.
+         * @returns Reference to object to make calls chainable.
+         */
+        OSMObject& set_timestamp(const char* timestamp) {
+            m_timestamp = detail::parse_timestamp(timestamp);
+            if (timestamp[20] != '\0') {
+                throw std::invalid_argument{"can not parse timestamp"};
+            }
+            return *this;
+        }
+
         /// Get user name for this object.
         const char* user() const noexcept {
             return reinterpret_cast<const char*>(data() + sizeof_object());
@@ -313,8 +333,9 @@ namespace osmium {
          *
          * @param attr Name of the attribute (must be one of "id", "version", "changeset", "timestamp", "uid", "visible")
          * @param value Value of the attribute
+         * @returns Reference to object to make calls chainable.
          */
-        void set_attribute(const char* attr, const char* value) {
+        OSMObject& set_attribute(const char* attr, const char* value) {
             if (!std::strcmp(attr, "id")) {
                 set_id(value);
             } else if (!std::strcmp(attr, "version")) {
@@ -322,12 +343,14 @@ namespace osmium {
             } else if (!std::strcmp(attr, "changeset")) {
                 set_changeset(value);
             } else if (!std::strcmp(attr, "timestamp")) {
-                set_timestamp(osmium::Timestamp(value));
+                set_timestamp(value);
             } else if (!std::strcmp(attr, "uid")) {
                 set_uid(value);
             } else if (!std::strcmp(attr, "visible")) {
                 set_visible(value);
             }
+
+            return *this;
         }
 
         using iterator       = osmium::memory::CollectionIterator<Item>;

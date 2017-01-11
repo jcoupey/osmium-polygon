@@ -33,7 +33,9 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
+#include <cstdint>
 #include <cstring>
+#include <iterator>
 
 #include <osmium/memory/collection.hpp>
 #include <osmium/memory/item.hpp>
@@ -49,7 +51,7 @@ namespace osmium {
 
     namespace builder {
         class ChangesetDiscussionBuilder;
-        template <typename T> class ObjectBuilder;
+        class ChangesetBuilder;
     } // namespace builder
 
     class Changeset;
@@ -127,18 +129,10 @@ namespace osmium {
 
     class ChangesetDiscussion : public osmium::memory::Collection<ChangesetComment, osmium::item_type::changeset_discussion> {
 
-        friend class osmium::builder::ObjectBuilder<osmium::Changeset>;
-
     public:
-
-        using size_type = size_t;
 
         ChangesetDiscussion() :
             osmium::memory::Collection<ChangesetComment, osmium::item_type::changeset_discussion>() {
-        }
-
-        size_type size() const noexcept {
-            return static_cast<size_type>(std::distance(begin(), end()));
         }
 
     }; // class ChangesetDiscussion
@@ -154,7 +148,7 @@ namespace osmium {
      */
     class Changeset : public osmium::OSMEntity {
 
-        friend class osmium::builder::ObjectBuilder<osmium::Changeset>;
+        friend class osmium::builder::ChangesetBuilder;
 
         osmium::Box       m_bounds;
         osmium::Timestamp m_created_at;
@@ -171,8 +165,12 @@ namespace osmium {
             OSMEntity(sizeof(Changeset), osmium::item_type::changeset) {
         }
 
-        void set_user_size(string_size_type size) {
+        void set_user_size(string_size_type size) noexcept {
             m_user_size = size;
+        }
+
+        string_size_type user_size() const noexcept {
+            return m_user_size;
         }
 
         unsigned char* subitems_position() {
@@ -184,6 +182,11 @@ namespace osmium {
         }
 
     public:
+
+        // Dummy to avoid warning because of unused private fields. Do not use.
+        int32_t do_not_use() const noexcept {
+            return m_padding1 + m_padding2;
+        }
 
         /// Get ID of this changeset
         changeset_id_type id() const noexcept {

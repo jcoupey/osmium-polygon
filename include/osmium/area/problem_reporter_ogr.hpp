@@ -42,7 +42,6 @@ DEALINGS IN THE SOFTWARE.
  * @attention If you include this file, you'll need to link with `libgdal`.
  */
 
-#include <cstdint>
 #include <memory>
 
 #include <gdalcpp.hpp>
@@ -50,6 +49,7 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/area/problem_reporter.hpp>
 #include <osmium/geom/factory.hpp>
 #include <osmium/geom/ogr.hpp>
+#include <osmium/osm/item_type.hpp>
 #include <osmium/osm/location.hpp>
 #include <osmium/osm/node_ref.hpp>
 #include <osmium/osm/node_ref_list.hpp>
@@ -181,7 +181,7 @@ namespace osmium {
                     feature.set_field("id2", 0);
                     feature.set_field("problem", "way_in_multiple_rings");
                     feature.add_to_layer();
-                } catch (osmium::geometry_error& e) {
+                } catch (const osmium::geometry_error&) {
                     // XXX
                 }
             }
@@ -197,7 +197,7 @@ namespace osmium {
                     feature.set_field("id2", 0);
                     feature.set_field("problem", "inner_with_same_tags");
                     feature.add_to_layer();
-                } catch (osmium::geometry_error& e) {
+                } catch (const osmium::geometry_error&) {
                     // XXX
                 }
             }
@@ -216,7 +216,7 @@ namespace osmium {
                     set_object(feature);
                     feature.set_field("way_id", int32_t(way.id()));
                     feature.add_to_layer();
-                } catch (osmium::geometry_error& e) {
+                } catch (const osmium::geometry_error&) {
                     // XXX
                 }
             }

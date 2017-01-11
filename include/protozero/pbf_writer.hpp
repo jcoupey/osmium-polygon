@@ -90,13 +90,10 @@ class pbf_writer {
     void add_fixed(T value) {
         protozero_assert(m_pos == 0 && "you can't add fields to a parent pbf_writer if there is an existing pbf_writer for a submessage");
         protozero_assert(m_data);
-#if PROTOZERO_BYTE_ORDER == PROTOZERO_LITTLE_ENDIAN
-        m_data->append(reinterpret_cast<const char*>(&value), sizeof(T));
-#else
-        const auto size = m_data->size();
-        m_data->resize(size + sizeof(T));
-        byteswap<sizeof(T)>(reinterpret_cast<const char*>(&value), const_cast<char*>(m_data->data() + size));
+#if PROTOZERO_BYTE_ORDER != PROTOZERO_LITTLE_ENDIAN
+        detail::byteswap_inplace(&value);
 #endif
+        m_data->append(reinterpret_cast<const char*>(&value), sizeof(T));
     }
 
     template <typename T, typename It>
@@ -156,12 +153,16 @@ class pbf_writer {
     // The number of bytes to reserve for the varint holding the length of
     // a length-delimited field. The length has to fit into pbf_length_type,
     // and a varint needs 8 bit for every 7 bit.
-    static constexpr const int reserve_bytes = sizeof(pbf_length_type) * 8 / 7 + 1;
+    enum constant_reserve_bytes : int {
+        reserve_bytes = sizeof(pbf_length_type) * 8 / 7 + 1
+    };
 
     // If m_rollpack_pos is set to this special value, it means that when
     // the submessage is closed, nothing needs to be done, because the length
     // of the submessage has already been written correctly.
-    static constexpr const std::size_t size_is_known = std::numeric_limits<std::size_t>::max();
+    enum constant_size_is_known : std::size_t {
+        size_is_known = std::numeric_limits<std::size_t>::max()
+    };
 
     void open_submessage(pbf_tag_type tag, std::size_t size) {
         protozero_assert(m_pos == 0);

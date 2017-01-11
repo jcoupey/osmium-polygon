@@ -37,7 +37,6 @@ DEALINGS IN THE SOFTWARE.
 #include <cstddef>
 #include <iterator>
 #include <map>
-#include <stdexcept>
 #include <vector>
 
 #include <osmium/index/map.hpp>
@@ -80,7 +79,7 @@ namespace osmium {
                 const TValue get(const TId id) const final {
                     auto it = m_elements.find(id);
                     if (it == m_elements.end()) {
-                        not_found_error(id);
+                        throw osmium::not_found{id};
                     }
                     return it->second;
                 }

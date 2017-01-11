@@ -38,25 +38,22 @@ DEALINGS IN THE SOFTWARE.
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <future>
 #include <memory>
-#include <sstream>
 #include <string>
-#include <thread>
 #include <type_traits>
 
 #include <protozero/pbf_message.hpp>
+#include <protozero/types.hpp>
 
 #include <osmium/io/detail/input_format.hpp>
 #include <osmium/io/detail/pbf.hpp> // IWYU pragma: export
 #include <osmium/io/detail/pbf_decoder.hpp>
 #include <osmium/io/detail/protobuf_tags.hpp>
-#include <osmium/io/error.hpp>
-#include <osmium/io/file.hpp>
+#include <osmium/io/detail/queue_util.hpp>
 #include <osmium/io/file_format.hpp>
-#include <osmium/osm.hpp>
+#include <osmium/io/header.hpp>
 #include <osmium/osm/entity_bits.hpp>
-#include <osmium/osm/object.hpp>
-#include <osmium/osm/timestamp.hpp>
 #include <osmium/thread/pool.hpp>
 #include <osmium/thread/util.hpp>
 #include <osmium/util/config.hpp>
@@ -80,7 +77,7 @@ namespace osmium {
                  */
                 std::string read_from_input_queue(size_t size) {
                     while (m_input_buffer.size() < size) {
-                        std::string new_data = get_input();
+                        const std::string new_data = get_input();
                         if (input_done()) {
                             throw osmium::pbf_error("truncated data (EOF encountered)");
                         }
@@ -106,7 +103,7 @@ namespace osmium {
                     try {
                         const std::string input_data = read_from_input_queue(sizeof(size_in_network_byte_order));
                         size_in_network_byte_order = *reinterpret_cast<const uint32_t*>(input_data.data());
-                    } catch (osmium::pbf_error&) {
+                    } catch (const osmium::pbf_error&) {
                         return 0; // EOF
                     }
 
@@ -183,7 +180,7 @@ namespace osmium {
                     while (const auto size = check_type_and_get_blob_size("OSMData")) {
                         std::string input_buffer = read_from_input_queue_with_check(size);
 
-                        PBFDataBlobDecoder data_blob_parser{ std::move(input_buffer), read_types() };
+                        PBFDataBlobDecoder data_blob_parser{std::move(input_buffer), read_types(), read_metadata()};
 
                         if (osmium::config::use_pool_threads_for_pbf_parsing()) {
                             send_to_output_queue(osmium::thread::Pool::instance().submit(std::move(data_blob_parser)));
@@ -198,8 +195,8 @@ namespace osmium {
                 PBFParser(future_string_queue_type& input_queue,
                           future_buffer_queue_type& output_queue,
                           std::promise<osmium::io::Header>& header_promise,
-                          osmium::osm_entity_bits::type read_types) :
-                    Parser(input_queue, output_queue, header_promise, read_types),
+                          osmium::io::detail::reader_options options) :
+                    Parser(input_queue, output_queue, header_promise, options),
                     m_input_buffer() {
                 }
 
@@ -224,8 +221,8 @@ namespace osmium {
                 [](future_string_queue_type& input_queue,
                     future_buffer_queue_type& output_queue,
                     std::promise<osmium::io::Header>& header_promise,
-                    osmium::osm_entity_bits::type read_which_entities) {
-                    return std::unique_ptr<Parser>(new PBFParser(input_queue, output_queue, header_promise, read_which_entities));
+                    osmium::io::detail::reader_options options) {
+                    return std::unique_ptr<Parser>(new PBFParser(input_queue, output_queue, header_promise, options));
             });
 
             // dummy function to silence the unused variable warning from above

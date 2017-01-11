@@ -35,18 +35,13 @@ DEALINGS IN THE SOFTWARE.
 
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <functional>
-#include <iomanip>
 #include <iosfwd>
-#include <locale>
-#include <sstream>
+#include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <string>
-
-#include <iostream>
-
-#include <osmium/util/compatibility.hpp>
-#include <osmium/util/double.hpp>
 
 namespace osmium {
 
@@ -70,41 +65,20 @@ namespace osmium {
 
         constexpr const int coordinate_precision = 10000000;
 
-        // Fallback function used when a coordinate is written in scientific
-        // notation. This function uses stringstream and is much more expensive
-        // than the handcrafted one. But coordinates in scientific notations
-        // shouldn't be used anyway.
-        inline int32_t string_to_location_coordinate_fallback(const char* str) {
-            double value;
-            std::istringstream ss{str};
-            ss.imbue(std::locale("C"));
-            ss >> std::noskipws >> value;
-
-            if (ss.fail() || !ss.eof() || ss.bad() || value > 215.0 || value < -215.0) {
-                throw invalid_location{std::string{"wrong format for coordinate: '"} + str + "'"};
-            }
-
-            return std::round(value * coordinate_precision);
-        }
-
         // Convert string with a floating point number into integer suitable
         // for use as coordinate in a Location.
-        inline int32_t string_to_location_coordinate(const char* str) {
+        inline int32_t string_to_location_coordinate(const char** data) {
+            const char* str = *data;
             const char* full = str;
 
-            // call fallback if scientific notation is used
-            while (*str) {
-                if (*str == 'e' || *str == 'E') {
-                    return string_to_location_coordinate_fallback(full);
-                }
-                ++str;
-            }
-
-            str = full;
-
-            int32_t result = 0;
+            int64_t result = 0;
             int sign = 1;
-            int scale = 7;
+
+            // one more than significant digits to allow rounding
+            int64_t scale = 8;
+
+            // paranoia check for maximum number of digits
+            int max_digits = 10;
 
             // optional minus sign
             if (*str == '-') {
@@ -112,33 +86,35 @@ namespace osmium {
                 ++str;
             }
 
-            // first digit before decimal point
-            if (*str >= '0' && *str <= '9') {
-                result = *str - '0';
-                ++str;
-            } else {
-                goto error;
-            }
-
-            // optional second digit before decimal point
-            if (*str >= '0' && *str <= '9') {
-                result = result * 10 + *str - '0';
-                ++str;
-
-                // optional third digit before decimal point
+            if (*str != '.') {
+                // there has to be at least one digit
                 if (*str >= '0' && *str <= '9') {
-                    result = result * 10 + *str - '0';
+                    result = *str - '0';
                     ++str;
-                }
-            }
-
-            if (*str != '\0') {
-
-                // decimal point
-                if (*str != '.') {
+                } else {
                     goto error;
                 }
 
+                // optional additional digits before decimal point
+                while (*str >= '0' && *str <= '9' && max_digits > 0) {
+                    result = result * 10 + (*str - '0');
+                    ++str;
+                    --max_digits;
+                }
+
+                if (max_digits == 0) {
+                    goto error;
+                }
+            } else {
+                // need at least one digit after decimal dot if there was no
+                // digit before decimal dot
+                if (*(str + 1) < '0' || *(str + 1) > '9') {
+                    goto error;
+                }
+            }
+
+            // optional decimal point
+            if (*str == '.') {
                 ++str;
 
                 // read significant digits
@@ -146,29 +122,73 @@ namespace osmium {
                     result = result * 10 + (*str - '0');
                 }
 
-                // use 8th digit after decimal point for rounding
-                if (scale == 0 && *str >= '5' && *str <= '9') {
-                    ++result;
+                // ignore non-significant digits
+                max_digits = 20;
+                while (*str >= '0' && *str <= '9' && max_digits > 0) {
+                    ++str;
+                    --max_digits;
+                }
+
+                if (max_digits == 0) {
+                    goto error;
+                }
+            }
+
+            // optional exponent in scientific notation
+            if (*str == 'e' || *str == 'E') {
+                ++str;
+
+                int esign = 1;
+                // optional minus sign
+                if (*str == '-') {
+                    esign = -1;
                     ++str;
                 }
 
-                // ignore further digits
-                while (*str >= '0' && *str <= '9') {
-                    ++str;
-                }
+                int64_t eresult = 0;
 
-                // should be at the end now
-                if (*str != '\0') {
+                // there has to be at least one digit in exponent
+                if (*str >= '0' && *str <= '9') {
+                    eresult = *str - '0';
+                    ++str;
+                } else {
                     goto error;
                 }
 
+                // optional additional digits in exponent
+                max_digits = 5;
+                while (*str >= '0' && *str <= '9' && max_digits > 0) {
+                    eresult = eresult * 10 + (*str - '0');
+                    ++str;
+                    --max_digits;
+                }
+
+                if (max_digits == 0) {
+                    goto error;
+                }
+
+                scale += eresult * esign;
             }
 
-            for (; scale > 0; --scale) {
-                result *= 10;
+            if (scale < 0) {
+                for (; scale < 0 && result > 0; ++scale) {
+                    result /= 10;
+                }
+            } else {
+                for (; scale > 0; --scale) {
+                    result *= 10;
+                }
             }
 
-            return result * sign;
+            result = (result + 5) / 10 * sign;
+
+            if (result > std::numeric_limits<int32_t>::max() ||
+                result < std::numeric_limits<int32_t>::min()) {
+                goto error;
+            }
+
+            *data = str;
+            return static_cast<int32_t>(result);
 
         error:
 
@@ -391,12 +411,30 @@ namespace osmium {
             return *this;
         }
 
-        Location& set_lon(const char* str) noexcept {
+        Location& set_lon(const char* str) {
+            const char** data = &str;
+            m_x = detail::string_to_location_coordinate(data);
+            if (**data != '\0') {
+                throw invalid_location{std::string{"characters after coordinate: '"} + *data + "'"};
+            }
+            return *this;
+        }
+
+        Location& set_lat(const char* str) {
+            const char** data = &str;
+            m_y = detail::string_to_location_coordinate(data);
+            if (**data != '\0') {
+                throw invalid_location{std::string{"characters after coordinate: '"} + *data + "'"};
+            }
+            return *this;
+        }
+
+        Location& set_lon_partial(const char** str) {
             m_x = detail::string_to_location_coordinate(str);
             return *this;
         }
 
-        Location& set_lat(const char* str) noexcept {
+        Location& set_lat_partial(const char** str) {
             m_y = detail::string_to_location_coordinate(str);
             return *this;
         }
@@ -474,9 +512,9 @@ namespace osmium {
 
         template <>
         inline size_t hash<8>(const osmium::Location& location) noexcept {
-            size_t h = location.x();
+            uint64_t h = location.x();
             h <<= 32;
-            return h ^ location.y();
+            return static_cast<size_t>(h ^ location.y());
         }
 
     } // namespace detail

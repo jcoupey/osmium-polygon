@@ -1,5 +1,5 @@
-#ifndef OSMIUM_INDEX_BOOL_VECTOR_HPP
-#define OSMIUM_INDEX_BOOL_VECTOR_HPP
+#ifndef OSMIUM_OPL_HPP
+#define OSMIUM_OPL_HPP
 
 /*
 
@@ -33,18 +33,35 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <osmium/index/id_set.hpp>
+#include <osmium/memory/buffer.hpp>
+#include <osmium/io/detail/opl_parser_functions.hpp>
 
 namespace osmium {
 
-    namespace index {
-
-        /// @deprecated Use osmium::index::IdSet instead.
-        template <typename T>
-        using BoolVector = IdSet<T>;
-
-    } // namespace index
+    /**
+     * Parses one line in OPL format. The line must not have a newline
+     * character at the end. Buffer.commit() is called automatically if the
+     * write succeeded.
+     *
+     * @param data Line must be in this zero-delimited string.
+     * @param buffer Result will be written to this buffer.
+     *
+     * @returns true if an entity was parsed, false otherwise (for instance
+     *          when the line is empty).
+     * @throws osmium::opl_error If the parsing fails.
+     */
+    inline bool opl_parse(const char* data, osmium::memory::Buffer& buffer) {
+        try {
+            const bool wrote_something = osmium::io::detail::opl_parse_line(0, data, buffer);
+            buffer.commit();
+            return wrote_something;
+        } catch (const osmium::opl_error&) {
+            buffer.rollback();
+            throw;
+        }
+    }
 
 } // namespace osmium
 
-#endif // OSMIUM_INDEX_BOOL_VECTOR_HPP
+
+#endif // OSMIUM_OPL_HPP

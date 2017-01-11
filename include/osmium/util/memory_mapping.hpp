@@ -35,6 +35,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include <cassert>
 #include <cerrno>
+#include <cstddef>
 #include <stdexcept>
 #include <system_error>
 
@@ -214,7 +215,7 @@ private:
             ~MemoryMapping() noexcept {
                 try {
                     unmap();
-                } catch (std::system_error&) {
+                } catch (const std::system_error&) {
                     // Ignore any exceptions because destructor must not throw.
                 }
             }
@@ -302,7 +303,7 @@ private:
 
         public:
 
-            AnonymousMemoryMapping(size_t size) :
+            explicit AnonymousMemoryMapping(size_t size) :
                 MemoryMapping(size, mapping_mode::write_private) {
             }
 
@@ -338,7 +339,7 @@ private:
              * @param size Number of objects of type T to be mapped
              * @throws std::system_error if the mapping fails
              */
-            TypedMemoryMapping(size_t size) :
+            explicit TypedMemoryMapping(size_t size) :
                 m_mapping(sizeof(T) * size, MemoryMapping::mapping_mode::write_private) {
             }
 
@@ -487,7 +488,7 @@ private:
 
         public:
 
-            AnonymousTypedMemoryMapping(size_t size) :
+            explicit AnonymousTypedMemoryMapping(size_t size) :
                 TypedMemoryMapping<T>(size) {
             }
 

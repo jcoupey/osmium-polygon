@@ -35,13 +35,16 @@ DEALINGS IN THE SOFTWARE.
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
+#include <iterator>
 #include <numeric>
 #include <vector>
 
-#include <osmium/area/problem_reporter.hpp>
 #include <osmium/area/detail/node_ref_segment.hpp>
-#include <osmium/memory/buffer.hpp>
+#include <osmium/area/problem_reporter.hpp>
+#include <osmium/osm/item_type.hpp>
 #include <osmium/osm/location.hpp>
 #include <osmium/osm/node_ref.hpp>
 #include <osmium/osm/relation.hpp>
@@ -60,7 +63,7 @@ namespace osmium {
              * non-way members in the relation.
              */
             template <typename F>
-            inline void for_each_member(const osmium::Relation& relation, const std::vector<const osmium::Way*> ways, F&& func) {
+            inline void for_each_member(const osmium::Relation& relation, const std::vector<const osmium::Way*>& ways, F&& func) {
                 auto way_it = ways.cbegin();
                 for (const osmium::RelationMember& member : relation.members()) {
                     if (member.type() == osmium::item_type::way) {
@@ -98,7 +101,7 @@ namespace osmium {
                  * Calculate the number of segments in all the ways together.
                  */
                 static size_t get_num_segments(const std::vector<const osmium::Way*>& members) noexcept {
-                    return std::accumulate(members.cbegin(), members.cend(), 0, [](size_t sum, const osmium::Way* way) {
+                    return std::accumulate(members.cbegin(), members.cend(), static_cast<size_t>(0), [](size_t sum, const osmium::Way* way) {
                         if (way->nodes().empty()) {
                             return sum;
                         } else {
@@ -225,7 +228,7 @@ namespace osmium {
                 uint32_t extract_segments_from_ways(osmium::area::ProblemReporter* problem_reporter, const osmium::Relation& relation, const std::vector<const osmium::Way*>& members) {
                     assert(relation.members().size() >= members.size());
 
-                    size_t num_segments = get_num_segments(members);
+                    const size_t num_segments = get_num_segments(members);
                     if (problem_reporter) {
                         problem_reporter->set_nodes(num_segments);
                     }
@@ -258,11 +261,13 @@ namespace osmium {
                         }
 
                         // Only count and report duplicate segments if they
-                        // belong to the same way. Those cases are definitely
-                        // wrong. If the duplicate segments belong to
-                        // different ways, they could be touching inner rings
-                        // which are perfectly okay.
-                        if (it->way() == std::next(it)->way()) {
+                        // belong to the same way or if they don't both have
+                        // the role "inner". Those cases are definitely wrong.
+                        // If the duplicate segments belong to different
+                        // "inner" ways, they could be touching inner rings
+                        // which are perfectly okay. Note that for this check
+                        // the role has to be correct in the member data.
+                        if (it->way() == std::next(it)->way() || !it->role_inner() || !std::next(it)->role_inner()) {
                             ++duplicate_segments;
                             if (problem_reporter) {
                                 problem_reporter->report_duplicate_segment(it->first(), it->second());

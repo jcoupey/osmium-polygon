@@ -34,9 +34,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include <algorithm>
-#include <atomic>
 #include <cstddef>
-#include <cstdlib>
 #include <future>
 #include <thread>
 #include <type_traits>
@@ -79,7 +77,7 @@ namespace osmium {
             }
 
             inline size_t get_work_queue_size() noexcept {
-                size_t n = osmium::config::get_max_queue_size("WORK", 10);
+                const size_t n = osmium::config::get_max_queue_size("WORK", 10);
                 return n > 2 ? n : 2;
             }
 

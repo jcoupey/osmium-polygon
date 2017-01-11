@@ -160,12 +160,12 @@ namespace osmium {
                         if (!node_ref.location()) {
                             error = true;
                         }
-                    } catch (osmium::not_found&) {
+                    } catch (const osmium::not_found&) {
                         error = true;
                     }
                 }
                 if (error && !m_ignore_errors) {
-                    throw osmium::not_found("location for one or more nodes not found in node location index");
+                    throw osmium::not_found{"location for one or more nodes not found in node location index"};
                 }
             }
 

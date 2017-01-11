@@ -29,21 +29,6 @@ documentation.
 
 namespace protozero {
 
-namespace detail {
-
-    // Copy N bytes from src to dest on little endian machines, on big
-    // endian swap the bytes in the process.
-    template <int N>
-    inline void copy_or_byteswap(const char* src, void* dest) noexcept {
-#if PROTOZERO_BYTE_ORDER == PROTOZERO_LITTLE_ENDIAN
-        std::memcpy(dest, src, N);
-#else
-        byteswap<N>(src, reinterpret_cast<char*>(dest));
-#endif
-    }
-
-} // end namespace detail
-
 /**
  * A range of iterators based on std::pair. Created from beginning and
  * end iterators. Used as a return type from some pbf_reader methods
@@ -76,12 +61,12 @@ public:
     /**
      * Create iterator range from two iterators.
      *
-     * @param first Iterator to beginning or range.
-     * @param last Iterator to end or range.
+     * @param first_iterator Iterator to beginning or range.
+     * @param last_iterator Iterator to end or range.
      */
-    constexpr iterator_range(iterator&& first, iterator&& last) :
-        P(std::forward<iterator>(first),
-          std::forward<iterator>(last)) {
+    constexpr iterator_range(iterator&& first_iterator, iterator&& last_iterator) :
+        P(std::forward<iterator>(first_iterator),
+          std::forward<iterator>(last_iterator)) {
     }
 
     /// Return iterator to beginning of range.
@@ -153,25 +138,6 @@ inline void swap(iterator_range<T>& lhs, iterator_range<T>& rhs) noexcept {
     lhs.swap(rhs);
 }
 
-#ifdef PROTOZERO_USE_BARE_POINTER_FOR_PACKED_FIXED
-
-template <typename T>
-using const_fixed_iterator = const T*;
-
-/**
- * Create iterator_range from char pointers to beginning and end of range.
- *
- * @param first Beginning of range.
- * @param last End of range.
- */
-template <typename T>
-inline iterator_range<const_fixed_iterator<T>> create_fixed_iterator_range(const char* first, const char* last) {
-    return iterator_range<const_fixed_iterator<T>>{reinterpret_cast<const T*>(first),
-                                                   reinterpret_cast<const T*>(last)};
-}
-
-#else
-
 /**
  * A forward iterator used for accessing packed repeated fields of fixed
  * length (fixed32, sfixed32, float, double).
@@ -213,7 +179,10 @@ public:
 
     value_type operator*() const {
         value_type result;
-        detail::copy_or_byteswap<sizeof(value_type)>(m_data , &result);
+        std::memcpy(&result, m_data, sizeof(value_type));
+#if PROTOZERO_BYTE_ORDER != PROTOZERO_LITTLE_ENDIAN
+        detail::byteswap_inplace(&result);
+#endif
         return result;
     }
 
@@ -237,20 +206,6 @@ public:
     }
 
 }; // class const_fixed_iterator
-
-/**
- * Create iterator_range from char pointers to beginning and end of range.
- *
- * @param first Beginning of range.
- * @param last End of range.
- */
-template <typename T>
-inline iterator_range<const_fixed_iterator<T>> create_fixed_iterator_range(const char* first, const char* last) {
-    return iterator_range<const_fixed_iterator<T>>{const_fixed_iterator<T>(first, last),
-                                                   const_fixed_iterator<T>(last, last)};
-}
-
-#endif
 
 /**
  * A forward iterator used for accessing packed repeated varint fields

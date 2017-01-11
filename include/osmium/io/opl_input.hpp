@@ -1,5 +1,5 @@
-#ifndef OSMIUM_INDEX_BOOL_VECTOR_HPP
-#define OSMIUM_INDEX_BOOL_VECTOR_HPP
+#ifndef OSMIUM_IO_OPL_INPUT_HPP
+#define OSMIUM_IO_OPL_INPUT_HPP
 
 /*
 
@@ -33,18 +33,14 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <osmium/index/id_set.hpp>
+/**
+ * @file
+ *
+ * Include this file if you want to read OSM OPL files.
+ *
+ */
 
-namespace osmium {
+#include <osmium/io/reader.hpp> // IWYU pragma: export
+#include <osmium/io/detail/opl_input_format.hpp> // IWYU pragma: export
 
-    namespace index {
-
-        /// @deprecated Use osmium::index::IdSet instead.
-        template <typename T>
-        using BoolVector = IdSet<T>;
-
-    } // namespace index
-
-} // namespace osmium
-
-#endif // OSMIUM_INDEX_BOOL_VECTOR_HPP
+#endif // OSMIUM_IO_OPL_INPUT_HPP

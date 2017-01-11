@@ -33,10 +33,11 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <algorithm>
+#include <cassert>
 #include <exception>
 #include <future>
 #include <string>
+#include <utility>
 
 #include <osmium/memory/buffer.hpp>
 #include <osmium/thread/queue.hpp>
@@ -58,13 +59,6 @@ namespace osmium {
              * data in order.
              */
             using future_buffer_queue_type = future_queue_type<osmium::memory::Buffer>;
-
-            /**
-             * This type of queue contains OSM file data in the form it is
-             * stored on disk, ie encoded as XML, PBF, etc.
-             * The "end of file" is marked by an empty string.
-             */
-            using string_queue_type = osmium::thread::Queue<std::string>;
 
             /**
              * This type of queue contains OSM file data in the form it is
@@ -95,11 +89,11 @@ namespace osmium {
                 add_to_queue<T>(queue, T{});
             }
 
-            inline bool at_end_of_data(const std::string& data) {
+            inline bool at_end_of_data(const std::string& data) noexcept {
                 return data.empty();
             }
 
-            inline bool at_end_of_data(osmium::memory::Buffer& buffer) {
+            inline bool at_end_of_data(osmium::memory::Buffer& buffer) noexcept {
                 return !buffer;
             }
 
@@ -139,6 +133,7 @@ namespace osmium {
                     if (!m_has_reached_end_of_data) {
                         std::future<T> data_future;
                         m_queue.wait_and_pop(data_future);
+                        assert(data_future.valid());
                         data = std::move(data_future.get());
                         if (at_end_of_data(data)) {
                             m_has_reached_end_of_data = true;
