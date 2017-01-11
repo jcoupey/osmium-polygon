@@ -14,11 +14,16 @@ polygon::polygon(const std::string& name,
   _name(name),
   _outer_ring(json_rings[0])    // First ring as exterior ring.
 {
+  auto out_bbox = _outer_ring.bbox();
+
   // Setting inner rings.
   std::for_each(json_rings.Begin() + 1,
                 json_rings.End(),
                 [&](const auto& r){
                   _inner_rings.emplace_back(r);
+                  auto in_bbox = _inner_rings.back().bbox();
+                  assert(out_bbox.contains(in_bbox.bottom_left())
+                         and out_bbox.contains(in_bbox.top_right()));
                 });
 }
 
