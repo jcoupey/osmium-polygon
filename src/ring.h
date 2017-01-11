@@ -29,6 +29,8 @@ public:
   bool contains(const osmium::Location& loc) const;
 
   bool contains(const osmium::Node& node) const;
+
+  osmium::Box bbox() const;
 };
 
 #endif

@@ -40,3 +40,7 @@ bool polygon::contains(const osmium::Location& loc) const{
 bool polygon::contains(const osmium::Node& node) const{
   return this->contains(node.location());
 }
+
+osmium::Box polygon::bbox() const{
+  return _outer_ring.bbox();
+}
