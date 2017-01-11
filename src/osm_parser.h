@@ -35,7 +35,7 @@ namespace bgi = boost::geometry::index;
 typedef bg::model::point<float, 2, bg::cs::cartesian> point;
 typedef bg::model::box<point> box;
 typedef std::pair<box, unsigned> value;
-typedef bgi::rtree<value, bgi::quadratic<16>> rtree_t;
+typedef bgi::rtree<value, bgi::rstar<16>> rtree_t;
 
 typedef osmium::index::map::SparseMemArray<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
 
