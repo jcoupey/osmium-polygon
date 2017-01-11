@@ -8,7 +8,7 @@ CC = g++
 FLAGS = -std=c++14 -Wpedantic -Wall -Wextra -O3 -I../include/
 LDLIBS = -lpthread -lz -lbz2 -lexpat
 
-MAIN = ../bin/osmium-polygon
+MAIN = ../osmium-polygon
 # Using all cpp files in current directory.
 SRC = $(wildcard *.cpp)
 OBJ = $(filter-out main.o,$(SRC:.cpp=.o))
@@ -27,7 +27,7 @@ main.o : main.cpp
 	$(CC) $(FLAGS) -c $< -o $@
 
 # Tests
-TEST = ../bin/osmium-polygon-tests
+TEST = ../osmium-polygon-tests
 
 TEST_SRC = $(wildcard ./test/*.cpp)
 TEST_OBJ = $(TEST_SRC:.cpp=.o)

@@ -38,23 +38,23 @@ Using [this geojson file](/files/berlin_flower.geojson).
 
 # Build
 
-Clone the repo, create a `bin` folder and build.
+Make sure `boost` is installed on your system, clone the repo and
+build from the `src` folder.
 
 ```bash
 git clone https://github.com/jcoupey/osmium-polygon.git
-cd osmium-polygon/
-mkdir bin
-cd src/
+cd osmium-polygon/src/
 make
+cd ..
 ```
 
 # Usage
 
-Use `-p` to describe which geojson file contains your polygon and run
-on any OSM data file.
+Use `-p` to describe which geojson file contains your (multi-)polygons
+and run on any OSM data file.
 
 ```bash
-osmium-polygon -p files/berlin_heart.geojson berlin-latest.osm.pbf
+./osmium-polygon -p files/berlin_heart.geojson berlin-latest.osm.pbf
 ```
 
 # Tests
@@ -63,5 +63,6 @@ In the `src` folder, build and run using:
 
 ```bash
 make test
-../bin/osmium-polygon-tests
+cd ../
+./osmium-polygon-tests
 ```
