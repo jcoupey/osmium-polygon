@@ -146,7 +146,7 @@ int main(int argc, char* argv[]){
 
     std::cout << "[info] Building R-tree...\n";
 
-    bgi::rtree<value, bgi::quadratic<16>> rtree;
+    rtree_t rtree;
     for(unsigned i = 0 ; i < polygons.size() ; ++i){
       const osmium::Box osmium_box = polygons[i].bbox();
       const auto bl = osmium_box.bottom_left();
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]){
       rtree.insert(std::make_pair(b, i));
     }
 
-    return parse_file(input_name, output_name, polygons);
+    return parse_file(input_name, output_name, polygons, rtree);
   }
 }
 
