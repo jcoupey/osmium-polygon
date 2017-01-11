@@ -170,15 +170,13 @@ int parse_file(std::string input_name,
                                         inside_ways,
                                         inside_relations);
 
-  std::cout << "Checking inclusion for polygons in "
+  std::cout << "[info] Checking inclusion for polygons in "
             << input_name
             << "..."
             << std::endl;
 
   osmium::apply(reader_1, polygon_handler);
   reader_1.close();
-
-  std::cout << "Done:" << std::endl;;
 
   std::cout << "* "
             << inside_nodes.size()
@@ -219,7 +217,7 @@ int parse_file(std::string input_name,
                               | osmium::osm_entity_bits::way
                               | osmium::osm_entity_bits::relation);
 
-  std::cout << "Now writing down extract in "
+  std::cout << "[info] writing down extract in "
             << output_name
             << std::endl;
 
@@ -227,4 +225,3 @@ int parse_file(std::string input_name,
 
   return 0;
 }
-
