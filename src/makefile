@@ -1,6 +1,6 @@
 # This file is part of osmium-polygon.
 
-# Copyright (c) 2016, Julien Coupey.
+# Copyright (c) 2016-2017, Julien Coupey.
 # All rights reserved (see LICENSE).
 
 # Variables.
