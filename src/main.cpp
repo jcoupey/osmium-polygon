@@ -65,7 +65,7 @@ int main(int argc, char* argv[]){
   if(poly_name.empty()){
     display_usage();
   }
-  std::cout << "Parsing geojson file, searching for polygons...\n";
+  std::cout << "[info] Parsing geojson file, searching for polygons...\n";
 
   rapidjson::Document json_input;
   std::string error_msg;
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]){
 
   if(!json_input.HasMember("features")
      or !json_input["features"].IsArray()){
-    std::cout << "Invalid \"features\" key.\n";
+    std::cout << "[error] Invalid \"features\" key.\n";
     exit(1);
   }
 
@@ -135,15 +135,29 @@ int main(int argc, char* argv[]){
   }
 
   if(polygons.empty()){
-    std::cout << "No polygon feature found in file: "
+    std::cout << "[info] No polygon feature found in file: "
               << poly_name << "!\n";
     return 0;
   }
   else{
-    std::cout << "Found "
+    std::cout << "[info] Found "
               << polygons.size()
               << " polygon feature(s).\n";
-    return parse_file(input_name, output_name, polygons);
+
+    std::cout << "[info] Building R-tree...\n";
+
+    rtree_t rtree;
+    for(unsigned i = 0 ; i < polygons.size() ; ++i){
+      const osmium::Box osmium_box = polygons[i].bbox();
+      const auto bl = osmium_box.bottom_left();
+      const auto tr = osmium_box.top_right();
+
+      box b(point(bl.lon(), bl.lat()), point(tr.lon(), tr.lat()));
+
+      rtree.insert(std::make_pair(b, i));
+    }
+
+    return parse_file(input_name, output_name, polygons, rtree);
   }
 }
 

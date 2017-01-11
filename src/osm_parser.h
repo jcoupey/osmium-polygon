@@ -23,12 +23,25 @@ All rights reserved (see LICENSE).
 #include <osmium/builder/attr.hpp>
 #include <osmium/index/map/sparse_mem_array.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point.hpp>
+#include <boost/geometry/geometries/box.hpp>
+#include <boost/geometry/index/rtree.hpp>
 #include "polygon.h"
+
+namespace bg = boost::geometry;
+namespace bgi = boost::geometry::index;
+
+typedef bg::model::point<float, 2, bg::cs::cartesian> point;
+typedef bg::model::box<point> box;
+typedef std::pair<box, unsigned> value;
+typedef bgi::rtree<value, bgi::rstar<16>> rtree_t;
 
 typedef osmium::index::map::SparseMemArray<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
 
 int parse_file(std::string input_name,
                std::string output_name,
-               const std::vector<polygon>& polygons);
+               const std::vector<polygon>& polygons,
+               const rtree_t& rtree);
 
 #endif

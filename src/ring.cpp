@@ -87,3 +87,7 @@ bool ring::contains(const osmium::Location& loc) const{
 bool ring::contains(const osmium::Node& node) const{
   return this->contains(node.location());
 }
+
+osmium::Box ring::bbox() const{
+  return _bbox;
+}
